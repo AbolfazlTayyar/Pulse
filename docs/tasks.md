@@ -891,7 +891,7 @@ clearly marked stale, and we never hammer a vendor that told us to slow down.
 
 ### convert command **[E6]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** Converts an amount from one currency to another using cached prices, with exact
 decimal math. It shows the prices it used so the result can be checked by hand. It never calls
