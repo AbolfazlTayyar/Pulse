@@ -39,11 +39,12 @@ describe("health command", function()
    end)
 
    it("reports last fetch age and an active cooldown", function()
-      snapshot.set_last_fetch(r, "coingecko", os.time() - 100)
+      local last = os.time() - 100
+      snapshot.set_last_fetch(r, "coingecko", last)
       limiter.set_cooldown(r, "coingecko", "30")
       local b = proc.run({ "health" }).body
       assert.is_true(b.ok) -- the source block is informational
-      assert.are.equal(tostring(os.time() - 100), b.source.last_fetch_unix)
+      assert.are.equal(tostring(last), b.source.last_fetch_unix)
       local age = tonumber(b.source.last_fetch_age_s)
       assert.is_true(age >= 100 and age <= 102)
       assert.is_true(b.source.cooldown_active)
