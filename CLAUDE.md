@@ -86,9 +86,12 @@ market-dev-1.rockspec   Lua dependencies for the native path (luasocket, luasec,
 Dockerfile, docker-compose.yml
 ```
 
-**Adapter contract:** each `source/*.lua` exposes `name`, `fetch(symbols, quote, timeout_ms)`
-returning canonical rows `{symbol, quote, price, volume_24h, change_24h_pct}` (all strings) plus
-per-symbol errors. Adding a source = new adapter + registry entry; the output schema never changes.
+**Adapter contract:** each `source/*.lua` exposes `new(base_url)` returning `name`,
+`fetch(symbols, quote, timeout_ms)` → canonical rows `{symbol, quote, price, volume_24h,
+change_24h_pct}` (all strings), per-symbol errors and `info` (`kind`: ok / timeout / connect /
+server_error / rate_limited / http_error / bad_payload), plus `effective_quote(quote)` (ADR 0024)
+and `supports(symbol, quote)`. Adapters never retry. Adding a source = new adapter + its name in
+`M.NAMES` in `src/source/init.lua`; the output schema never changes.
 
 ### fetch flow (single-flight / anti-stampede)
 

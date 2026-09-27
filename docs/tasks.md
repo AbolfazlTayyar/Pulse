@@ -1153,7 +1153,7 @@ In short: someone who has never seen the project can run it in a few minutes.
 
 ### Architecture note **[F4]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** The required 1–2 page explanation of how the system works and why, with one
 diagram. It's the document reviewers read to judge the design, and it summarizes the ADRs rather
