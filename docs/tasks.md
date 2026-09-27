@@ -337,7 +337,7 @@ In short: `0.1 + 0.2` is exactly `0.3`, and huge amounts never overflow or lose 
 
 ### Redis client **[C1]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** Our own small Redis connector. It sends a command and reads the answer, and it
 gives up after 200 ms instead of hanging. If Redis is down it returns an error value, it never

@@ -11,6 +11,9 @@ services:
       - .:/app            # bind mount: edits show up without a rebuild
     environment:
       REDIS_HOST: redis   # required, no default anywhere else (CLAUDE.md: no silent magic host)
+      # Cap glibc name lookup at ~1 s: with Redis stopped, "redis" stops resolving and a lookup
+      # would otherwise block ~8 s, longer than DEADLINE_MS (luasocket cannot time it out).
+      RES_OPTIONS: "timeout:1 attempts:1"
     depends_on:
       redis:
         condition: service_healthy
