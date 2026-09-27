@@ -470,7 +470,7 @@ back off when it asks us to.
 
 ### Snapshot store **[C4]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** Where the latest good price for each coin is kept in Redis, along with "when was
 this fetched". It's the shared cache every process reads from, and what lets 200 runs share one
