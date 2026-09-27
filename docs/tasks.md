@@ -702,7 +702,7 @@ calling the market API.
 
 ### health command **[E2]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A real health check. It actually pings Redis and reports when we last got data
 from the market API, how many API calls we've made, and whether we're in a cooldown. It never

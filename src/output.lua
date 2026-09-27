@@ -8,8 +8,8 @@ local M = {}
 local KEY_ORDER = {
    "id", "symbol", "ok", "code", "detail", "schema",
    "quote", "price", "volume_24h", "change_24h_pct", "as_of_unix", "stale",
-   "source", "from", "to", "amount", "result", "rate", "items", "errors", "legs",
-   "process", "redis", "name", "latency_ms", "error", "last_fetch_unix", "last_fetch_age_s",
+   "process", "redis", "lua", "version", "source", "from", "to", "amount", "result", "rate", "items", "errors", "legs",
+   "name", "latency_ms", "error", "last_fetch_unix", "last_fetch_age_s",
    "vendor_calls", "cooldown_active", "cache", "partial", "redis_ms", "http_ms", "meta",
 }
 
