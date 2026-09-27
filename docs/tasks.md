@@ -70,7 +70,7 @@ In short: you can run Lua and the tests with one command, and Redis is ready to 
 
 ### String-preserving JSON **[A2]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** Normal JSON libraries turn `84115.123456789012345` into a float and quietly
 lose digits. This patched copy of dkjson keeps every number as the exact text the vendor sent,
