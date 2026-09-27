@@ -3,7 +3,6 @@
 -- Never raises, and REDIS_PASSWORD never appears in an error message.
 local M = {}
 
-local SOURCES = { coingecko = true, binance = true, kraken = true }
 local LOG_LEVELS = { debug = true, info = true, warn = true, error = true }
 
 -- name, config key, default: every numeric setting must be a positive integer.
@@ -99,8 +98,9 @@ local function load_config(getenv)
    end
 
    c.market_source = read(getenv, "MARKET_SOURCE") or "coingecko"
-   if not SOURCES[c.market_source] then
-      return bad("MARKET_SOURCE must be one of coingecko, binance, kraken")
+   local registry = require("src.source")
+   if not registry.is_known(c.market_source) then
+      return bad("MARKET_SOURCE must be one of " .. table.concat(registry.NAMES, ", "))
    end
 
    c.market_quote = read(getenv, "MARKET_QUOTE") or "USD"

@@ -8,7 +8,10 @@ local log = require("src.log")
 
 local M = {}
 
-local ADAPTERS = { coingecko = true, binance = true, kraken = true }
+-- The registry: adding a source is one adapter file plus its name here.
+M.NAMES = { "coingecko", "binance", "kraken" }
+local ADAPTERS = {}
+for _, n in ipairs(M.NAMES) do ADAPTERS[n] = true end
 
 -- Failure kinds an adapter reports in info.kind:
 --   ok, timeout, connect, server_error (5xx), rate_limited (429), http_error (other status),
