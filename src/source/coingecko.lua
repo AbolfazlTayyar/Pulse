@@ -76,6 +76,7 @@ function M.new(base_url)
       base_url = base_url,
       fetch = function(symbols, quote, timeout_ms) return fetch(base_url, symbols, quote, timeout_ms) end,
       effective_quote = function(quote) return quote end,
+      supports = function(symbol) return M.IDS[symbol] ~= nil end,
    }
 end
 

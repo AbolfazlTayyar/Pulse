@@ -95,7 +95,9 @@ function M.is_known(name)
 end
 
 -- Adapter instance for a source: { name, fetch(symbols, quote, timeout_ms) -> rows, errors, info,
--- effective_quote(quote) }. base_url overrides the adapter's default (SOURCE_URL).
+-- effective_quote(quote) -> the quote actually priced (ADR 0024), supports(symbol, quote) -> bool:
+-- false means the adapter would answer UNKNOWN_SYMBOL without asking the vendor }.
+-- base_url overrides the adapter's default (SOURCE_URL).
 function M.get(name, base_url)
    if not ADAPTERS[name] then
       return nil, "unknown market source " .. tostring(name)

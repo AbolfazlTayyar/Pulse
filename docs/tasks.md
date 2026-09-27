@@ -743,7 +743,7 @@ In short: `health` tells the truth: Redis up or down, and when we last got fresh
 
 ### fetch — cache hit and leader path **[E3]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** The main command. If Redis already has fresh prices, print them. If not, take the
 lock, call the market API once, save the results for everyone, and print them. This task covers
@@ -798,7 +798,7 @@ come from the cache with no API call.
 
 ### fetch — followers and coalescing **[E4]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** What happens to everyone who didn't get the lock: they wait briefly and read the
 result the leader saved, instead of calling the API themselves. This is why 50 parallel runs cost
@@ -845,7 +845,7 @@ In short: 20 identical requests at the same time → 1 API call, and everyone ge
 
 ### fetch — vendor failures **[E5]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** What `fetch` does when the market API misbehaves: down, slow, "too many
 requests", or garbage. It always answers `ok: false` with a clear code, still includes the last

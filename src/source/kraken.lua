@@ -125,6 +125,7 @@ function M.new(base_url)
       base_url = base_url,
       fetch = function(symbols, quote, timeout_ms) return fetch(base_url, symbols, quote, timeout_ms) end,
       effective_quote = M.effective_quote,
+      supports = function(symbol, quote) return M.ASSETS[symbol] ~= nil and symbol ~= quote end,
    }
 end
 
