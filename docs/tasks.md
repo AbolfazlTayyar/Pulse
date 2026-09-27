@@ -611,7 +611,7 @@ In short: ask for BTC and a made-up coin, and you get BTC's exact price plus a c
 
 ### Binance and Kraken adapters **[D3]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** Two more plug-ins for other market APIs, to prove a new source can be added
 without changing our output. They're tested with saved sample data, because both APIs are
