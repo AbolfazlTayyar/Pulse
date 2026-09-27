@@ -1109,7 +1109,7 @@ In short: a short, copyable example of calling the worker from Python and readin
 
 ### README **[F3]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** The front page of the repo. It explains how to start Redis and run `fetch`,
 `health` and the load test, both with Docker and natively, and it documents the exact contract a
