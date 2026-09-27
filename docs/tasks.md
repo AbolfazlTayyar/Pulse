@@ -251,7 +251,7 @@ typed by a user can ever run as a shell command.
 
 ### Time budget **[A6]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A stopwatch for each run. The host may kill us after about 5 seconds, so every
 wait and retry asks "do I still have time?" first. That way we finish and print JSON on our own

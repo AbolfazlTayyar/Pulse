@@ -6,24 +6,22 @@
 local script_dir = (arg and arg[0] or ""):match("^(.*)[/\\]") or "."
 package.path = script_dir .. "/?.lua;" .. script_dir .. "/?/init.lua;" .. package.path
 
-local socket = require("socket")
+-- The time budget counts from process start, not from when config was loaded.
+local deadline = require("src.deadline")
+local started_ms = deadline.now_ms()
+
 local output = require("src.output")
 local log = require("src.log")
 local cli = require("src.cli")
 local config = require("src.config")
-
-local started = socket.gettime()
-
-local function elapsed_ms()
-   return math.floor((socket.gettime() - started) * 1000 + 0.5)
-end
 
 local function internal_error_body()
    return output.error_body("INTERNAL_ERROR",
       "unexpected internal error; see stderr logs for inv " .. log.invocation_id())
 end
 
--- Command modules live in src/commands/<name>.lua and expose run(req, ctx) -> body, exit_code.
+-- Command modules live in src/commands/<name>.lua and expose run(req, ctx) -> body, exit_code,
+-- where ctx = { config, deadline, log }. Every command gets the one deadline of this process.
 local function load_command(name)
    local modname = "src.commands." .. name
    if not package.searchpath(modname, package.path) then
@@ -50,7 +48,8 @@ local function run(argv)
    if not command then
       return output.error_body("BAD_ARGS", req.command .. " is not implemented yet"), 2
    end
-   local body, exit_code = command.run(req, { config = cfg, log = log })
+   local d = deadline.new(cfg.deadline_ms, { start = started_ms })
+   local body, exit_code = command.run(req, { config = cfg, deadline = d, log = log })
    return body, exit_code
 end
 
@@ -75,7 +74,7 @@ end
 
 log.info("invocation_end", {
    exit_code = exit_code,
-   duration_ms = elapsed_ms(),
+   duration_ms = math.floor(deadline.now_ms() - started_ms),
    cache = type(body) == "table" and type(body.meta) == "table" and body.meta.cache or nil,
 })
 os.exit(exit_code)
