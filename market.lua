@@ -22,6 +22,7 @@ end
 
 -- Command modules live in src/commands/<name>.lua and expose run(req, ctx) -> body, exit_code,
 -- where ctx = { config, deadline, log }. Every command gets the one deadline of this process.
+-- A command that writes its own output (daemon) returns false as the body.
 local function load_command(name)
    local modname = "src.commands." .. name
    if not package.searchpath(modname, package.path) then
@@ -60,12 +61,16 @@ local ok, body, exit_code = xpcall(run, debug.traceback, argv)
 if not ok then
    log.error("internal_error", { detail = tostring(body) })
    body, exit_code = internal_error_body(), 1
-elseif type(body) ~= "table" or math.type(exit_code) ~= "integer" then
+elseif (body ~= false and type(body) ~= "table") or math.type(exit_code) ~= "integer" then
    log.error("internal_error", { detail = "command returned no body or no integer exit code" })
    body, exit_code = internal_error_body(), 1
 end
 
-local written, err = output.emit(body)
+-- body == false: the command wrote its own lines (daemon: one response per request line).
+local written, err = true, nil
+if body ~= false then
+   written, err = output.emit(body)
+end
 if not written then
    log.error("internal_error", { detail = err })
    output.emit(internal_error_body())

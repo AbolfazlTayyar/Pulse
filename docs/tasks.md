@@ -977,7 +977,7 @@ least-recently-used item first.
 
 ### Daemon mode **[E8]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A long-running mode that reads one JSON command per line from stdin and writes one
 JSON answer per line. It keeps its Redis connection and the in-memory cache between commands,
