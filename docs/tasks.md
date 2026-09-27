@@ -291,7 +291,7 @@ In short: every run has a hard time limit, and nothing waits or retries past it.
 
 ### Arbitrary-precision decimals **[B1]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A small calculator for money that works on digit strings, not floats. It can
 add, multiply and divide numbers of any size exactly, and rounds only once at the very end.
