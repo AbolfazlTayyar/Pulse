@@ -938,7 +938,7 @@ alongside.
 
 ### In-process LRU cache **[E7]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A small in-memory cache with a hard size limit: at most 256 entries and about
 1 MiB. When full, it drops whatever was used least recently. It only helps in daemon mode, since
