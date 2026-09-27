@@ -1190,7 +1190,7 @@ Kraken?", each in one or two sentences with a link to the ADR for details.
 
 ### Final review against the brief **[F5]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A last pass with the grading sheet in hand. Every requirement and every
 "automatic fail" item is checked against the real repo with a command or test, not from memory.
