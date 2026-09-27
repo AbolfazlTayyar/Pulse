@@ -428,7 +428,7 @@ everyone forever.
 
 ### Rate limit and 429 cooldown **[C3]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A shared counter in Redis that caps how often we call the market API: 5 calls per
 10 seconds across all processes. It also has a "cooldown" switch: when the vendor says "too many
