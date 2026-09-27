@@ -554,7 +554,7 @@ In short: only clean data gets through, and one bad row costs one symbol, not th
 
 ### CoinGecko adapter and source registry **[D2]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** The piece that talks to the real market API (CoinGecko), turns its JSON into our
 standard shape, and reports what went wrong per coin. A registry picks the adapter from
