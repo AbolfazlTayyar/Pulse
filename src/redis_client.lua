@@ -269,6 +269,20 @@ function M.from_config(cfg, deadline)
    return M.connect(cfg.redis_host, cfg.redis_port, cfg.redis_timeout_ms, cfg.redis_password, deadline)
 end
 
+-- Client for one command: the daemon's shared client (ctx.redis, re-pointed at this request's
+-- deadline) or a new connection. Returns client, redis_ms already spent on it; or nil, err.
+function M.from_context(ctx)
+   if ctx.redis then
+      ctx.redis.deadline = ctx.deadline
+      return ctx.redis, ctx.redis.redis_ms
+   end
+   local client, err = M.from_config(ctx.config, ctx.deadline)
+   if not client then
+      return nil, err
+   end
+   return client, 0
+end
+
 -- The one way every command reports a Redis failure (ADR 0009): body, exit code 3.
 function M.unavailable(err)
    return output.error_body("REDIS_UNAVAILABLE", "redis unavailable: " .. tostring(err)), 3

@@ -656,7 +656,7 @@ In short: switch `MARKET_SOURCE` and you get the same JSON shape from a differen
 
 ### snapshot command **[E1]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** "Show me the last known prices." It only reads from the Redis cache and never
 calls the market API, so it's safe to run any number of times. Old prices are returned but

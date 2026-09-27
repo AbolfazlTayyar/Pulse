@@ -149,6 +149,33 @@ function M.summarize(items)
    return oldest, cache
 end
 
+-- Empty tables encode as [] by default; items and errors must always be arrays.
+local ARRAY = { __jsontype = "array" }
+local OBJECT = { __jsontype = "object" }
+
+-- A full ticker.v1 body (ADR 0003), also used for errors that carry items (ADR 0011).
+-- t: ok, code?, detail?, source, items, errors, cache?, redis_ms, http_ms.
+-- as_of_unix is the oldest item's; meta.cache defaults to the hit/stale/mixed rule.
+function M.ticker_body(t)
+   local as_of, cache = M.summarize(t.items)
+   return {
+      ok = t.ok,
+      code = t.code,
+      detail = t.detail,
+      schema = "ticker.v1",
+      as_of_unix = as_of,
+      source = t.source,
+      items = setmetatable(t.items, ARRAY),
+      errors = setmetatable(t.errors, ARRAY),
+      meta = setmetatable({
+         cache = t.cache or cache,
+         partial = #t.items > 0 and #t.errors > 0,
+         redis_ms = t.redis_ms,
+         http_ms = t.http_ms or 0,
+      }, OBJECT),
+   }
+end
+
 -- Unix time of the last successful vendor fetch (for health). Returns true or nil, err.
 function M.set_last_fetch(client, source, now)
    local ok, err = client:call_idempotent("SET", last_fetch_key(source), now)

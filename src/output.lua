@@ -4,9 +4,13 @@ local json = require("src.vendor.dkjson")
 local M = {}
 
 -- Fixed key order for the top level of every body, so output is stable and readable.
+-- dkjson applies one order list to every object, so item and leg fields are listed too.
 local KEY_ORDER = {
-   "id", "ok", "code", "detail", "schema", "as_of_unix", "source",
-   "items", "errors", "meta",
+   "id", "symbol", "ok", "code", "detail", "schema",
+   "quote", "price", "volume_24h", "change_24h_pct", "as_of_unix", "stale",
+   "source", "from", "to", "amount", "result", "rate", "items", "errors", "legs",
+   "process", "redis", "name", "latency_ms", "error", "last_fetch_unix", "last_fetch_age_s",
+   "vendor_calls", "cooldown_active", "cache", "partial", "redis_ms", "http_ms", "meta",
 }
 
 local stream = io.stdout
