@@ -107,7 +107,7 @@ In short: whatever number the vendor sends, you get back exactly the same charac
 
 ### stdout writer and stderr logger **[A3]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** Two tiny modules that decide where text goes. The result goes to stdout for the
 calling program to parse. Logs go to stderr for humans and log tools. Keeping them apart is what
