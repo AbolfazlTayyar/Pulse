@@ -51,7 +51,7 @@ supersedes the old one, then update this file.
 | Redis client | **Own small RESP client** over luasocket (`src/redis_client.lua`) with explicit connect/read timeouts. |
 | JSON | **dkjson, vendored and patched** (`src/vendor/dkjson.lua`) so decoded numbers keep their original text. Prices must never pass through a Lua float. |
 | Decimal math | **Own arbitrary-precision** integer + scale in `decimal.lua` (base-10^7 limbs): add, multiply, long division, round-half-even. Plain 64-bit ints overflow on ordinary `convert` inputs (~10²²). |
-| Quote currency | **USD default**, configurable via `MARKET_QUOTE`. `convert --to USDT` works via cross-rate (USDT's own USD price). |
+| Quote currency | **USD default**, configurable via `MARKET_QUOTE`. `convert --to USDT` works via cross-rate (USDT's own USD price). Binance has no USD pairs: with `USD` it fetches USDT pairs and labels them `USDT` ([ADR 0024](docs/adr/0024-binance-usd-quote-as-usdt.md)). |
 | `convert` output | **`convert.v1`**: `result`, `rate`, `legs[]` (prices used, each with `as_of_unix`/`stale`). Cache only — never calls the vendor; missing price → `PRICE_UNAVAILABLE`. Stale legs → convert and mark `stale: true`. Single final rounding to `CONVERT_SCALE` (8) decimals, half-even. |
 | Tests | **busted** |
 
