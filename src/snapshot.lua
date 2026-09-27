@@ -99,8 +99,10 @@ local function decode_item(raw, symbol)
 end
 
 -- One MGET. Returns { [symbol] = item | M.MISSING }, or nil, err on Redis failure.
--- item.stale = (now - as_of_unix >= fresh_s). A corrupt stored value counts as missing.
-function M.read(client, source, symbols, now, fresh_s)
+-- item.stale = (now - as_of_unix >= fresh_s). A corrupt stored value counts as missing, and so
+-- does one priced in another quote than `quote` (when given): keys don't include the quote, so
+-- after a MARKET_QUOTE change an old USD price must not be served as EUR.
+function M.read(client, source, symbols, now, fresh_s, quote)
    local result = {}
    if #symbols == 0 then
       return result
@@ -120,7 +122,9 @@ function M.read(client, source, symbols, now, fresh_s)
          result[symbol] = M.MISSING
       else
          local item, why = decode_item(raw, symbol)
-         if item then
+         if item and quote and item.quote ~= quote then
+            result[symbol] = M.MISSING
+         elseif item then
             item.stale = (now - item.as_of_unix) >= fresh_s
             result[symbol] = item
          else

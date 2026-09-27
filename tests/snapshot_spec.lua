@@ -82,6 +82,12 @@ describe("snapshot", function()
       assert.is_nil(snapshot.write(r, source, { nonint }, 60))
    end)
 
+   it("treats an item priced in another quote as missing when a quote is given", function()
+      snapshot.write(r, source, { item("BTC", 1000) }, 60)
+      assert.are.equal(snapshot.MISSING, snapshot.read(r, source, { "BTC" }, 1000, 5, "EUR").BTC)
+      assert.are.equal("BTC", snapshot.read(r, source, { "BTC" }, 1000, 5, "USD").BTC.symbol)
+   end)
+
    it("stores and reads last_fetch", function()
       assert.are.equal(false, snapshot.get_last_fetch(r, source))
       assert.is_true(snapshot.set_last_fetch(r, source, 1726900000))

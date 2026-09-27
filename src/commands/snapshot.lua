@@ -2,6 +2,7 @@
 -- lock, never touches the rate limit. Stale data is still ok: true, marked stale per item.
 local redis = require("src.redis_client")
 local snapshot = require("src.snapshot")
+local source_registry = require("src.source")
 local log = require("src.log")
 
 local M = {}
@@ -11,6 +12,7 @@ local function ms(x) return math.floor(x + 0.5) end
 function M.run(req, ctx)
    local cfg = ctx.config
    local source = cfg.market_source
+   local quote = assert(source_registry.get(source, cfg.source_url)).effective_quote(cfg.market_quote)
    local now = os.time()
    local found, missing = {}, {}
 
@@ -32,7 +34,7 @@ function M.run(req, ctx)
       if not client then
          return redis.unavailable(r0)
       end
-      local res, err = snapshot.read(client, source, need, now, cfg.snapshot_fresh_s)
+      local res, err = snapshot.read(client, source, need, now, cfg.snapshot_fresh_s, quote)
       redis_ms = ms(client.redis_ms - r0)
       if not res then
          return redis.unavailable(err)
