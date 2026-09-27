@@ -28,3 +28,4 @@ See [0001](0001-record-architecture-decisions.md).
 | [0020](0020-convert-output-schema-convert-v1.md) | `convert` output schema `convert.v1` (legs, half-even, cache-only) | accepted |
 | [0021](0021-failure-taxonomy-and-retry-policy.md) | Failure taxonomy, retry policy, vendor payload validation, explicit config | accepted |
 | [0022](0022-snapshot-and-health-semantics.md) | `snapshot` (cache-only) and `health.v1` semantics | accepted |
+| [0023](0023-internal-error-code.md) | `INTERNAL_ERROR` code (exit 1) for unexpected Lua errors | accepted |

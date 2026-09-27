@@ -128,7 +128,8 @@ lua market.lua daemon                # NDJSON commands on stdin, one JSON respon
 - **Daemon request line:** `{"id": "...", "command": "fetch", "symbols": ["BTC","ETH"]}`;
   response line = the one-shot body plus the echoed `id`.
 - **Error codes (stable):** `BAD_ARGS`, `BAD_CONFIG`, `UNKNOWN_SYMBOL`, `SOURCE_UNAVAILABLE`, `RATE_LIMITED`,
-  `BAD_PAYLOAD`, `PRICE_UNAVAILABLE`, `REDIS_UNAVAILABLE`, `DEADLINE_EXCEEDED`.
+  `BAD_PAYLOAD`, `PRICE_UNAVAILABLE`, `REDIS_UNAVAILABLE`, `DEADLINE_EXCEEDED`, `INTERNAL_ERROR`
+  (unexpected Lua error, exit 1, details on stderr only — [ADR 0023](docs/adr/0023-internal-error-code.md)).
 
 ## Environment variables
 
@@ -178,7 +179,7 @@ There is deliberately no `mkt:inflight` key: the lock is the in-flight marker
 (`exit_code`, `duration_ms`), `cache_hit`/`cache_miss`, `lock_acquired`/`lock_busy`/
 `lock_released`/`lock_lost`, `vendor_call` (`status`, `http_ms`), `rate_limited`,
 `cooldown_set`/`cooldown_active`, `stale_served`, `symbol_error`, `redis_error`,
-`deadline_exceeded`. Never log secrets; a failed log write must never fail the job. Full list:
+`deadline_exceeded`, `internal_error`. Never log secrets; a failed log write must never fail the job. Full list:
 [ADR 0019](docs/adr/0019-structured-json-logs-on-stderr.md).
 
 ## Coding rules

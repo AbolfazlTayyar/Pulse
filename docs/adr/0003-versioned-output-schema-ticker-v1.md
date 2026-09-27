@@ -1,6 +1,6 @@
 # 0003 — Versioned output schema `ticker.v1`
 
-- Status: accepted
+- Status: accepted; error-code list extended by [0023](0023-internal-error-code.md)
 - Date: 2026-09-26
 - Deciders: Abolfazl Tayyar
 
