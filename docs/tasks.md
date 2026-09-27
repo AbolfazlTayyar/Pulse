@@ -385,7 +385,7 @@ error value that ends in exit code 3.
 
 ### Single-flight lock **[C2]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A "talking stick" in Redis. Only the process holding it may call the market API,
 and everyone else waits for its result. The stick expires on its own after 3 seconds, so a
