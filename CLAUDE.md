@@ -215,8 +215,10 @@ docker compose run --rm app sh scripts/load.sh               # 200 runs, -P 50; 
 Native Linux/WSL (what the brief's host does):
 
 ```bash
-sudo apt install lua5.4 liblua5.4-dev luarocks
-luarocks install --local --only-deps market-dev-1.rockspec
+sudo apt install lua5.4 liblua5.4-dev luarocks build-essential libssl-dev
+sudo update-alternatives --set lua-interpreter /usr/bin/lua5.4   # distro `lua` is 5.1
+luarocks --lua-version=5.4 install --local --only-deps market-dev-1.rockspec
+eval "$(luarocks --lua-version=5.4 path)"                   # --local rocks + ~/.luarocks/bin
 docker compose up -d redis                                   # or any reachable Redis
 export REDIS_HOST=127.0.0.1
 lua market.lua fetch BTC                                     # works from any cwd
