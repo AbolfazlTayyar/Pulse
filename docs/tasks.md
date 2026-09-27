@@ -25,7 +25,7 @@ written.
 
 ### Project skeleton & dev environment **[A1]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** The empty house everything else is built in. One command gives you Lua 5.4,
 its libraries and a Redis, on any machine. Nothing market-related works yet.

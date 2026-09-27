@@ -1,0 +1,9 @@
+-- busted config: specs live in tests/, modules are required as "src.<name>" from the repo root,
+-- the same way market.lua resolves them.
+return {
+   default = {
+      ROOT = { "tests" },
+      pattern = "_spec",
+      lpath = "./?.lua;./?/init.lua",
+   },
+}

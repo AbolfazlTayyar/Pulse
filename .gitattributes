@@ -1,0 +1,4 @@
+# The repo is bind-mounted into Linux containers and run by Linux hosts: keep LF everywhere,
+# even with core.autocrlf=true on Windows (CRLF breaks shell scripts).
+* text=auto eol=lf
+*.pdf binary

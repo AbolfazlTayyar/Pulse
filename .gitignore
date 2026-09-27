@@ -1,0 +1,19 @@
+# luarocks local trees (native path)
+lua_modules/
+.luarocks/
+*.rock
+
+# test coverage
+luacov.stats.out
+luacov.report.out
+
+# local env / secrets
+.env
+.env.*
+
+# editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

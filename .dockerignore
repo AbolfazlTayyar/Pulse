@@ -1,0 +1,3 @@
+# The image only needs the rockspec; the source is bind-mounted at runtime.
+*
+!market-dev-1.rockspec

@@ -1,0 +1,26 @@
+# Dev environment (ADR 0005). Examples:
+#   docker compose up -d redis
+#   docker compose run --rm app lua market.lua fetch BTC,ETH
+#   docker compose run --rm app busted
+services:
+  app:
+    build: .
+    image: market-app:dev
+    working_dir: /app
+    volumes:
+      - .:/app            # bind mount: edits show up without a rebuild
+    environment:
+      REDIS_HOST: redis   # required, no default anywhere else (CLAUDE.md: no silent magic host)
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
