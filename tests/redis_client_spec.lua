@@ -146,25 +146,50 @@ describe("redis_client failures", function()
       local ms = (socket.gettime() - t0) * 1000
       assert.is_nil(c)
       assert.truthy(err:find("refused", 1, true), err)
-      assert.is_true(ms < TIMEOUT, "took " .. ms .. " ms")
+      assert.is_true(ms < 1000, "took " .. ms .. " ms") -- refused is instant; slack for VM jitter
    end)
 
-   it("times out against an unroutable address within the Redis timeout (plus one retry)", function()
+   -- Attempts are counted (deterministic); wall-clock bounds are loose because Docker Desktop
+   -- can stall a container for a second now and then.
+   local function counting_connects(fn)
+      local real_tcp, attempts = socket.tcp, 0
+      socket.tcp = function(...)
+         attempts = attempts + 1
+         return real_tcp(...)
+      end
+      local ok, a, b = pcall(fn)
+      socket.tcp = real_tcp
+      assert(ok, a)
+      return attempts, a, b
+   end
+
+   it("times out against an unroutable address: one timeout, one retry", function()
       local t0 = socket.gettime()
-      local c, err = redis.connect("10.255.255.1", 6379, TIMEOUT)
+      local attempts, c, err = counting_connects(function()
+         return redis.connect("10.255.255.1", 6379, TIMEOUT)
+      end)
       local ms = (socket.gettime() - t0) * 1000
       assert.is_nil(c)
-      assert.is_string(err)
-      assert.is_true(ms < 2 * TIMEOUT + 100, "took " .. ms .. " ms")
+      assert.truthy(err:find("timeout", 1, true), err)
+      assert.are.equal(2, attempts)
+      assert.is_true(ms >= 2 * TIMEOUT - 20 and ms < 2 * TIMEOUT + 1000, "took " .. ms .. " ms")
    end)
 
    it("does not retry the connect when the deadline is short", function()
-      local d = deadline.new(250)
-      local t0 = socket.gettime()
-      local c = redis.connect("10.255.255.1", 6379, TIMEOUT, nil, d)
-      local ms = (socket.gettime() - t0) * 1000
+      local attempts, c = counting_connects(function()
+         return redis.connect("10.255.255.1", 6379, TIMEOUT, nil, deadline.new(250))
+      end)
       assert.is_nil(c)
-      assert.is_true(ms < TIMEOUT + 100, "took " .. ms .. " ms")
+      assert.are.equal(1, attempts)
+   end)
+
+   it("does not retry a failed name lookup", function()
+      local attempts, c, err = counting_connects(function()
+         return redis.connect("no-such-host.invalid", 6379, TIMEOUT)
+      end)
+      assert.is_nil(c)
+      assert.is_string(err)
+      assert.are.equal(1, attempts)
    end)
 
    it("does no I/O once the deadline has expired", function()
