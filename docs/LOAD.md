@@ -30,11 +30,24 @@ docker compose run --rm app sh -c 'cp -r /app /tmp/app && cd /tmp/app && sh scri
 
 ## Results
 
-### Live CoinGecko
+### Live CoinGecko, answering normally
 
-CoinGecko answered **429** to every request from this network during the measurement (the dev
+| Run | Invocations | p50 | p95 | Max | Vendor HTTP calls | `meta.cache` | Exit codes |
+|---|---|---|---|---|---|---|---|
+| cold cache, 200 × 50 | 200 | 32 ms | 735 ms | 751 ms | **1** | miss 1, coalesced 49, hit 150 | 0 ×200 |
+| warm cache, 200 × 50 | 200 | 33 ms | 58 ms | 71 ms | **0** | hit 200 | 0 ×200 |
+| 20 × 20, after the 5 s fresh window expired | 20 | 520 ms | 523 ms | 525 ms | **1** | miss 1, coalesced 19 | 0 ×20 |
+
+Reading the cold row: the first wave of 50 processes finds no snapshot; one takes the lock and
+calls CoinGecko (the `miss`), the other 49 poll Redis until its result lands (`coalesced`), and
+the remaining 150 start after the snapshot exists (`hit`). p95 ≈ CoinGecko's latency, because
+the first wave waits for it; everything after is a ~30 ms Redis read.
+
+### Live CoinGecko, rate-limiting us
+
+Earlier the same day CoinGecko answered **429** to every request from this network (the dev
 machine's traffic leaves through a VPN whose exit IP CoinGecko rate-limits; keyless limits are
-per IP and shared by everyone on it). So these runs show the back-off path, not fresh data:
+per IP and shared by everyone on it). These runs show the back-off path:
 
 | Run | Invocations | p50 | p95 | Vendor HTTP calls | `meta.cache` / code | Exit codes |
 |---|---|---|---|---|---|---|
@@ -48,7 +61,7 @@ Every response was `ok: false`, exit 1, per [ADR 0011](adr/0011-vendor-failure-r
 
 ### Healthy vendor (fixture, 400 ms simulated latency)
 
-To show coalescing with a vendor that answers, the same script ran against the recorded
+For a reproducible comparison with fixed vendor latency, the same script also ran against the recorded
 CoinGecko fixture through the test stub (`LUA_INIT='require("tests.support.fixture_http")'`,
 `SOURCE_URL=http://fixture/coingecko/simple_price.json`, `FIXTURE_DELAY_MS=400`). Everything
 except the HTTP call itself is the real code path: Redis lock, snapshots, rate limit, counter.
@@ -60,11 +73,6 @@ except the HTTP call itself is the real code path: Redis lock, snapshots, rate l
 | cold cache, 20 × 20 | 20 | 424 ms | 521 ms | 523 ms | **1** | miss 1, coalesced 19 | 0 ×20 |
 | cold again after the 5 s fresh window expired | 200 | 34 ms | 434 ms | 443 ms | **1** | miss 1, coalesced 49, hit 150 | 0 ×200 |
 | cold, from the bind mount (`/app`) | 200 | 572 ms | 1056 ms | 1147 ms | **1** | miss 1, coalesced 49, hit 150 | 0 ×200 |
-
-Reading the cold 200 × 50 row: the first wave of 50 processes finds no snapshot; one takes the
-lock and calls the vendor (the `miss`), the other 49 wait ~400 ms and read its result
-(`coalesced`), and the remaining 150 start after the snapshot exists (`hit`). p95 ≈ the vendor
-latency, because the first wave waits for it.
 
 The coalescing is also covered by `tests/cmd_fetch_spec.lua` ("20 parallel fetches make exactly
 one vendor call"), which passed 6 runs out of 6.
