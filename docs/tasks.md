@@ -1074,7 +1074,7 @@ written down.
 
 ### Host wrapper example **[F2]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A roughly 10-line Python script showing how another program would call our
 worker: run it, read the JSON, check the exit code. It's the copy-paste example for other teams.
