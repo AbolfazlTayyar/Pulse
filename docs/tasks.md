@@ -148,7 +148,7 @@ In short: results only ever appear on stdout, logs only ever on stderr, one line
 
 ### Configuration **[A4]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** Reads all settings from environment variables once, at startup, and refuses to
 run if anything is missing or doesn't make sense. There is no hidden default Redis address, so
