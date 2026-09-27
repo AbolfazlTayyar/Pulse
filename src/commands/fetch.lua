@@ -57,7 +57,7 @@ function Run:read()
    if #need == 0 then
       return true
    end
-   local res, err = snapshot.read(self.client, self.name, need, now, self.cfg.snapshot_fresh_s)
+   local res, err = snapshot.read(self.client, self.name, need, now, self.cfg.snapshot_fresh_s, self.quote)
    if not res then
       return nil, err
    end
@@ -284,9 +284,12 @@ function M.run(req, ctx)
    -- for a lock nobody holds would only burn the deadline. This stays bounded: the loop ends at
    -- the deadline, only one process can hold the lock, and the rate limit and cooldown still cap
    -- the vendor calls a chain of leaders can make.
+   -- Every poll does up to three Redis round-trips (lock, read, TTL); stop while each still gets
+   -- its full REDIS_TIMEOUT_MS, so a squeezed timeout is never mistaken for Redis being down.
+   local stop_at = M.RESERVE_MS + 3 * cfg.redis_timeout_ms
    local waited_since = d:elapsed_ms()
    local was_follower = false
-   while d:remaining_ms() > M.RESERVE_MS do
+   while d:remaining_ms() > stop_at do
       local token, lerr = lock.acquire(client, self.name, cfg.lock_ttl_ms)
       if token == nil then
          return redis.unavailable(lerr)
@@ -307,7 +310,7 @@ function M.run(req, ctx)
 
       was_follower = true
       repeat
-         d:sleep(math.min(M.POLL_MS, d:remaining_ms() - M.RESERVE_MS))
+         d:sleep(math.min(M.POLL_MS, d:remaining_ms() - stop_at))
          ok, err = self:read()
          if not ok then return redis.unavailable(err) end
          if self:all_fresh() then
@@ -316,7 +319,7 @@ function M.run(req, ctx)
          end
          local ttl = lock.remaining_ttl_ms(client, self.name)
          if ttl == nil then return redis.unavailable("lock ttl") end
-      until ttl == 0 or d:remaining_ms() <= M.RESERVE_MS
+      until ttl == 0 or d:remaining_ms() <= stop_at
    end
    log.info("lock_busy", { source = self.name, wait_ms = d:elapsed_ms() - waited_since })
    return self:deadline_exceeded("follower")
