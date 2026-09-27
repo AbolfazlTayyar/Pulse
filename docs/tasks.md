@@ -195,7 +195,7 @@ you which setting is wrong.
 
 ### Argument parsing and entrypoint **[A5]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** The front door. It checks every argument against a strict allow-list before
 anything else happens, so input like `BTC;rm -rf /` is rejected, and it guarantees that every run
