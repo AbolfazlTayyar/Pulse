@@ -1029,7 +1029,7 @@ questions are answered from memory.
 
 ### Load test and LOAD.md **[F1]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** Proof that the design holds up: run 200 fetches, 50 at a time, as the brief does,
 and measure how long they took and how many real API calls happened. The goal is a handful of API
