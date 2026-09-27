@@ -515,7 +515,7 @@ whether it's fresh or stale.
 
 ### Vendor row validation **[D1]**
 
-⬜ **Not started**
+✅ **Done**
 
 **Description:** A gatekeeper for data coming from the market API. Each row must have all its
 fields, real numbers and a price above zero, otherwise it's reported as an error and never saved.
