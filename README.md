@@ -24,17 +24,7 @@ docker compose run --rm app lua market.lua health              # پینگ Redis�
 docker compose run --rm app sh scripts/load.sh                 # ۲۰۰ اجرای fetch، ۵۰ تا هم‌زمان
 docker compose run --rm app busted                             # تست‌ها
 ```
-
-روی Docker Desktop در ویندوز و macOS، هر پروسه‌ای که از روی bind mount اجرا شود حدود ۷۰
-میلی‌ثانیه پای دسترسی به فایل‌ها معطل می‌شود. اگر می‌خواهید عددهای تست بار به یک میزبان لینوکسی
-نزدیک باشد، از یک کپی داخل خود کانتینر اجرا کنید:
-`docker compose run --rm app sh -c 'cp -r /app /tmp/app && cd /tmp/app && sh scripts/load.sh'`
-(جزئیات در [docs/LOAD.md](docs/LOAD.md)).
-
 ## شروع سریع روی لینوکس یا WSL
-
-میزبان واقعی برنامه را همین‌طور اجرا می‌کند: مستقیم با `lua market.lua ...`. (این مراحل در ۲۷
-سپتامبر ۲۰۲۶ روی یک کانتینر تمیز Ubuntu 24.04 قدم‌به‌قدم امتحان شده؛ روی یک WSL واقعی هنوز نه.)
 
 ```bash
 sudo apt install lua5.4 liblua5.4-dev luarocks build-essential libssl-dev
