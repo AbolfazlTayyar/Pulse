@@ -1,171 +1,176 @@
-# market — live crypto market ingest worker
+# market: worker قیمت لحظه‌ای کریپتو
 
-A one-shot Lua 5.4 CLI that other services spawn many times per second: arguments in, **one JSON
-object on stdout**, JSON-line logs on stderr, a meaningful exit code. It fetches live prices from a
-public market API (CoinGecko by default), normalizes them to a versioned schema (`ticker.v1`) with
-prices as exact decimal strings, and uses **Redis** so concurrent processes share one lock, one
-rate limit and one set of last-good snapshots: 200 parallel `fetch` calls make one vendor call.
-There is no HTTP server and no listening port anywhere.
+یک برنامهٔ خط فرمان کوچک با Lua 5.4 که سرویس‌های دیگر ممکن است در هر ثانیه چند بار اجرایش کنند.
+آرگومان می‌گیرد، **یک شیء JSON روی stdout** چاپ می‌کند، لاگ‌ها را خط‌به‌خط و به شکل JSON روی
+stderr می‌نویسد و با یک exit code معنادار بیرون می‌رود. قیمت‌ها را از یک API عمومی بازار می‌گیرد
+(پیش‌فرض CoinGecko)، به یک schema نسخه‌دار (`ticker.v1`) تبدیلشان می‌کند که در آن قیمت‌ها رشتهٔ
+دهدهی دقیق‌اند، و با **Redis** کاری می‌کند که پروسه‌های هم‌زمان یک قفل، یک rate limit و یک
+مجموعه snapshot از آخرین دادهٔ سالم را با هم شریک باشند. نتیجه این‌که ۲۰۰ اجرای موازی `fetch`
+فقط یک درخواست به vendor می‌زنند. هیچ HTTP server یا پورت بازی هم در کار نیست.
 
-- Design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · decisions: [docs/adr/](docs/adr/README.md)
-- Measured load: [docs/LOAD.md](docs/LOAD.md) · host example: [scripts/host_example.py](scripts/host_example.py)
+- طراحی: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (خلاصهٔ فارسی: [docs/ARCHITECTURE.fa.md](docs/ARCHITECTURE.fa.md)) · تصمیم‌ها: [docs/adr/](docs/adr/README.md)
+- نتایج تست بار: [docs/LOAD.md](docs/LOAD.md) · نمونهٔ میزبان: [scripts/host_example.py](scripts/host_example.py)
 
-## Quick start (Docker Compose)
+## شروع سریع با Docker Compose
 
-Needs Docker with Compose. The repo is bind-mounted into the `app` container, which sets
-`REDIS_HOST=redis`.
+Docker همراه با Compose لازم است. پوشهٔ پروژه داخل کانتینر `app` مونت می‌شود و
+`REDIS_HOST=redis` هم همان‌جا تنظیم شده.
 
 ```bash
-docker compose build                                           # Lua 5.4 + luarocks deps (once)
-docker compose up -d redis                                     # start Redis
-docker compose run --rm app lua market.lua fetch BTC           # one live fetch
-docker compose run --rm app lua market.lua health              # Redis ping, last fetch, cooldown
-docker compose run --rm app sh scripts/load.sh                 # 200 fetches, 50 in parallel
-docker compose run --rm app busted                             # tests
+docker compose build                                           # Lua 5.4 و وابستگی‌های luarocks (یک بار)
+docker compose up -d redis                                     # بالا آوردن Redis
+docker compose run --rm app lua market.lua fetch BTC           # یک fetch زنده
+docker compose run --rm app lua market.lua health              # پینگ Redis، آخرین fetch، cooldown
+docker compose run --rm app sh scripts/load.sh                 # ۲۰۰ اجرای fetch، ۵۰ تا هم‌زمان
+docker compose run --rm app busted                             # تست‌ها
 ```
 
-On Docker Desktop for Windows/macOS, each process started from the bind mount pays ~70 ms of
-file access; for load numbers that match a Linux host, run from a copy inside the container:
+روی Docker Desktop در ویندوز و macOS، هر پروسه‌ای که از روی bind mount اجرا شود حدود ۷۰
+میلی‌ثانیه پای دسترسی به فایل‌ها معطل می‌شود. اگر می‌خواهید عددهای تست بار به یک میزبان لینوکسی
+نزدیک باشد، از یک کپی داخل خود کانتینر اجرا کنید:
 `docker compose run --rm app sh -c 'cp -r /app /tmp/app && cd /tmp/app && sh scripts/load.sh'`
-(see [docs/LOAD.md](docs/LOAD.md)).
+(جزئیات در [docs/LOAD.md](docs/LOAD.md)).
 
-## Quick start (native Linux / WSL)
+## شروع سریع روی لینوکس یا WSL
 
-This is how a real host runs it: `lua market.lua ...` directly. (Verified step by step on a clean
-Ubuntu 24.04 container on 2026-09-27; not yet on a physical WSL install.)
+میزبان واقعی برنامه را همین‌طور اجرا می‌کند: مستقیم با `lua market.lua ...`. (این مراحل در ۲۷
+سپتامبر ۲۰۲۶ روی یک کانتینر تمیز Ubuntu 24.04 قدم‌به‌قدم امتحان شده؛ روی یک WSL واقعی هنوز نه.)
 
 ```bash
 sudo apt install lua5.4 liblua5.4-dev luarocks build-essential libssl-dev
-sudo update-alternatives --set lua-interpreter /usr/bin/lua5.4   # distro `lua` is 5.1
+sudo update-alternatives --set lua-interpreter /usr/bin/lua5.4   # lua پیش‌فرض توزیع 5.1 است
 luarocks --lua-version=5.4 install --local --only-deps market-dev-1.rockspec
-eval "$(luarocks --lua-version=5.4 path)"                        # --local rocks + ~/.luarocks/bin
-docker compose up -d redis                                       # or any reachable Redis
+eval "$(luarocks --lua-version=5.4 path)"                        # rockهای --local و ~/.luarocks/bin
+docker compose up -d redis                                       # یا هر Redis در دسترس دیگری
 export REDIS_HOST=127.0.0.1
 lua market.lua fetch BTC
 lua market.lua health
-sh scripts/load.sh                                               # 200 fetches, 50 in parallel
-busted                                                           # tests (need the compose Redis)
+sh scripts/load.sh                                               # ۲۰۰ اجرای fetch، ۵۰ تا هم‌زمان
+busted                                                           # تست‌ها (به Redis داخل compose نیاز دارند)
 ```
 
-Use an IP for `REDIS_HOST` (or cap the resolver with `RES_OPTIONS="timeout:1 attempts:1"`):
-name lookup is the one step luasocket cannot put a timeout on.
+برای `REDIS_HOST` بهتر است IP بدهید (یا زمان resolver را با `RES_OPTIONS="timeout:1 attempts:1"`
+محدود کنید)، چون resolve کردن نام میزبان تنها مرحله‌ای است که luasocket نمی‌تواند برایش timeout
+بگذارد.
 
-## Commands
+## دستورها
 
-```
-lua market.lua fetch BTC,ETH,SOL                         live prices (cached for 5 s, shared by all processes)
-lua market.lua snapshot --symbols BTC,ETH                cached prices only, never calls the vendor
-lua market.lua convert --from BTC --to USDT --amount 1.5 exact conversion from cached prices
-lua market.lua health                                    Redis ping, last fetch, vendor calls, cooldown
-lua market.lua daemon                                    NDJSON requests on stdin, one response per line
-```
+| دستور | کارش |
+|---|---|
+| `lua market.lua fetch BTC,ETH,SOL` | قیمت لحظه‌ای (۵ ثانیه cache می‌شود و همهٔ پروسه‌ها از همان استفاده می‌کنند) |
+| `lua market.lua snapshot --symbols BTC,ETH` | فقط قیمت‌های cache‌شده؛ هیچ‌وقت سراغ vendor نمی‌رود |
+| `lua market.lua convert --from BTC --to USDT --amount 1.5` | تبدیل دقیق بر اساس قیمت‌های cache‌شده |
+| `lua market.lua health` | پینگ Redis، آخرین fetch، تعداد درخواست‌ها به vendor، cooldown |
+| `lua market.lua daemon` | درخواست‌ها به صورت NDJSON از stdin، هر پاسخ در یک خط |
 
-Symbols are `A-Z0-9`, 1–15 characters, comma-separated (duplicates dropped), at most 50 per call.
-Amounts are positive decimals, at most 30 integer digits and 18 decimals. Anything containing
-`; | & $ \` ( ) < > \ ' "`, whitespace or control characters is rejected (`BAD_ARGS`, exit 2);
-arguments never reach a shell.
+نمادها فقط از `A-Z0-9` تشکیل می‌شوند، ۱ تا ۱۵ کاراکتر، با کاما از هم جدا (تکراری‌ها حذف
+می‌شوند) و حداکثر ۵۰ تا در هر اجرا. مبلغ باید یک عدد دهدهی مثبت باشد با حداکثر ۳۰ رقم صحیح و ۱۸
+رقم اعشار. هر ورودی که یکی از کاراکترهای ``; | & $ ` ( ) < > \ ' "``، فاصله یا کاراکتر کنترلی
+داشته باشد رد می‌شود (`BAD_ARGS`، exit 2). آرگومان‌ها هیچ‌وقت به shell نمی‌رسند.
 
-## Spawn contract
+## قرارداد اجرا
 
 | | |
 |---|---|
-| **argv** | `lua /path/to/market.lua <command> [args]` as an argument list, never through a shell |
-| **cwd** | doesn't matter (see below) |
-| **env** | the table below; only `REDIS_HOST` is required. Validated once at startup: any bad value → `BAD_CONFIG`, exit 2 |
-| **stdout** | exactly **one** JSON object on one line (daemon: one object per input line). Nothing else is ever printed there, so the whole of stdout is the payload |
-| **stderr** | logs, one JSON object per line (`ts`, `level`, `inv`, `event`, ...); never secrets. Pretty-print with `lua market.lua fetch BTC 2> >(jq -c .)` |
-| **exit code** | `0` ok · `1` business/upstream error (JSON body still on stdout) · `2` bad arguments or configuration · `3` Redis unavailable |
-| **time** | every run finishes within `DEADLINE_MS` (4 s); set the host's kill timeout above it |
+| **argv** | `lua /path/to/market.lua <command> [args]` به صورت لیست آرگومان، هیچ‌وقت از طریق shell |
+| **cwd** | فرقی نمی‌کند (پایین‌تر توضیح داده‌ام) |
+| **env** | جدول پایین؛ فقط `REDIS_HOST` اجباری است. همه یک بار موقع شروع بررسی می‌شوند و هر مقدار نامعتبر یعنی `BAD_CONFIG` با exit 2 |
+| **stdout** | دقیقاً **یک** شیء JSON در یک خط (در daemon: یک شیء به ازای هر خط ورودی). چیز دیگری آن‌جا چاپ نمی‌شود، پس کل stdout همان payload است |
+| **stderr** | لاگ، هر خط یک شیء JSON (`ts`، `level`، `inv`، `event` و ...)؛ رمز و اطلاعات محرمانه هیچ‌وقت در آن نمی‌آید. برای خواندن راحت‌تر: `lua market.lua fetch BTC 2> >(jq -c .)` |
+| **exit code** | `0` موفق · `1` خطای منطقی یا upstream (بدنهٔ JSON باز هم روی stdout هست) · `2` آرگومان یا تنظیمات نامعتبر · `3` Redis در دسترس نیست |
+| **زمان** | هر اجرا حداکثر در `DEADLINE_MS` (۴ ثانیه) تمام می‌شود؛ timeout میزبان برای kill کردن را بیشتر از این بگذارید |
 
-**Working directory and `LUA_PATH`.** `market.lua` puts its own directory first on
-`package.path` (from `arg[0]`), so `cd / && lua /opt/market/market.lua health` works without
-setting anything. The equivalent by hand is `LUA_PATH="/opt/market/?.lua;/opt/market/?/init.lua;;"`
-(the trailing `;;` keeps Lua's default path for the luarocks modules).
+**پوشهٔ جاری و `LUA_PATH`.** `market.lua` پوشهٔ خودش را (از روی `arg[0]`) اول `package.path`
+می‌گذارد، برای همین `cd / && lua /opt/market/market.lua health` بدون هیچ تنظیمی کار می‌کند. معادل
+دستی‌اش این است: `LUA_PATH="/opt/market/?.lua;/opt/market/?/init.lua;;"` (آن `;;` آخر مسیر
+پیش‌فرض Lua را برای ماژول‌های luarocks نگه می‌دارد).
 
-**Error codes** (stable): `BAD_ARGS`, `BAD_CONFIG`, `UNKNOWN_SYMBOL`, `SOURCE_UNAVAILABLE`,
-`RATE_LIMITED`, `BAD_PAYLOAD`, `PRICE_UNAVAILABLE`, `REDIS_UNAVAILABLE`, `DEADLINE_EXCEEDED`,
-`INTERNAL_ERROR`.
+**کدهای خطا** (ثابت‌اند و عوض نمی‌شوند): `BAD_ARGS`، `BAD_CONFIG`، `UNKNOWN_SYMBOL`،
+`SOURCE_UNAVAILABLE`، `RATE_LIMITED`، `BAD_PAYLOAD`، `PRICE_UNAVAILABLE`، `REDIS_UNAVAILABLE`،
+`DEADLINE_EXCEEDED`، `INTERNAL_ERROR`.
 
-### Environment
+### متغیرهای محیطی
 
-| Variable | Default | Meaning |
+| متغیر | پیش‌فرض | کاربرد |
 |---|---|---|
-| `REDIS_HOST` | **required** | Redis host; there is no default host |
-| `REDIS_PORT` / `REDIS_PASSWORD` | `6379` / unset | Redis port and optional password |
-| `REDIS_TIMEOUT_MS` | `200` | connect/read timeout per Redis operation |
-| `MARKET_SOURCE` | `coingecko` | `coingecko`, `binance` or `kraken` |
-| `MARKET_QUOTE` | `USD` | quote currency (Binance has no USD pairs: it prices in USDT and says so) |
-| `SOURCE_URL` | adapter's own | vendor base URL override (mocks and fixtures) |
-| `SOURCE_TIMEOUT_MS` | `2000` | vendor HTTP timeout |
-| `DEADLINE_MS` | `4000` | total budget per invocation; keep it below the host's kill timeout |
-| `LOCK_TTL_MS` | `3000` | single-flight lock TTL; must satisfy `SOURCE_TIMEOUT_MS < LOCK_TTL_MS < DEADLINE_MS` |
-| `SNAPSHOT_FRESH_S` / `SNAPSHOT_KEEP_S` | `5` / `3600` | "fresh, don't refetch" window / last-good retention |
-| `RATE_LIMIT_WINDOW_S` / `RATE_LIMIT_PER_WINDOW` | `10` / `5` | shared vendor-call cap |
-| `MAX_CONCURRENT_UPSTREAM` | `1` | in-flight vendor calls per source (only `1` is accepted) |
-| `CACHE_MAX_ENTRIES` / `CACHE_MAX_BYTES` | `256` / `1048576` | daemon in-process LRU bounds |
-| `CONVERT_SCALE` | `8` | decimals of `convert` results (round half to even) |
-| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `REDIS_HOST` | **اجباری** | آدرس Redis؛ هیچ مقدار پیش‌فرضی ندارد |
+| `REDIS_PORT` / `REDIS_PASSWORD` | `6379` / خالی | پورت Redis و رمز اختیاری |
+| `REDIS_TIMEOUT_MS` | `200` | timeout اتصال و خواندن برای هر عملیات Redis |
+| `MARKET_SOURCE` | `coingecko` | `coingecko`، `binance` یا `kraken` |
+| `MARKET_QUOTE` | `USD` | ارز مبنا (Binance جفت USD ندارد، پس قیمت را به USDT می‌دهد و در خروجی هم همین را می‌نویسد) |
+| `SOURCE_URL` | آدرس خود adapter | عوض کردن آدرس vendor (برای mock و fixture) |
+| `SOURCE_TIMEOUT_MS` | `2000` | timeout درخواست HTTP به vendor |
+| `DEADLINE_MS` | `4000` | کل زمان مجاز هر اجرا؛ کمتر از timeout میزبان نگهش دارید |
+| `LOCK_TTL_MS` | `3000` | TTL قفل single-flight؛ باید `SOURCE_TIMEOUT_MS < LOCK_TTL_MS < DEADLINE_MS` برقرار باشد |
+| `SNAPSHOT_FRESH_S` / `SNAPSHOT_KEEP_S` | `5` / `3600` | مدتی که داده تازه حساب می‌شود و دوباره گرفته نمی‌شود / مدت نگه‌داری آخرین دادهٔ سالم |
+| `RATE_LIMIT_WINDOW_S` / `RATE_LIMIT_PER_WINDOW` | `10` / `5` | سقف مشترک تعداد درخواست به vendor |
+| `MAX_CONCURRENT_UPSTREAM` | `1` | تعداد درخواست هم‌زمان به هر منبع (فقط `1` قبول می‌شود) |
+| `CACHE_MAX_ENTRIES` / `CACHE_MAX_BYTES` | `256` / `1048576` | سقف LRU داخل پروسه در حالت daemon |
+| `CONVERT_SCALE` | `8` | تعداد رقم اعشار نتیجهٔ `convert` (گرد کردن half-even) |
+| `LOG_LEVEL` | `info` | `debug`، `info`، `warn`، `error` |
 
-## Output examples
+## نمونهٔ خروجی
 
-`fetch` (live, first call in the 5 s window; later calls say `"cache":"hit"` and `"http_ms":0`):
+`fetch` (دادهٔ زنده، اولین اجرا در بازهٔ ۵ ثانیه‌ای؛ اجراهای بعدی `"cache":"hit"` و `"http_ms":0` دارند):
 
 ```json
 {"ok":true,"schema":"ticker.v1","as_of_unix":1790528981,"source":"coingecko","items":[{"symbol":"BTC","quote":"USD","price":"84378","volume_24h":"21954198073.562046","change_24h_pct":"0.36808338666521584","as_of_unix":1790528981,"stale":false}],"errors":[],"meta":{"cache":"miss","partial":false,"redis_ms":3,"http_ms":593}}
 ```
 
-`fetch BTC,FAKECOIN` is a partial success (exit 0): BTC in `items`,
-`{"symbol":"FAKECOIN","code":"UNKNOWN_SYMBOL",...}` in `errors`, `"partial":true`.
+`fetch BTC,FAKECOIN` موفقیت نسبی حساب می‌شود (exit 0): BTC در `items` می‌آید،
+`{"symbol":"FAKECOIN","code":"UNKNOWN_SYMBOL",...}` در `errors`، و `"partial":true` است.
 
-`snapshot --symbols BTC,DOGE` with only BTC cached (exit 0; nothing cached at all → exit 1):
+`snapshot --symbols BTC,DOGE` وقتی فقط BTC در cache هست (exit 0؛ اگر هیچ‌کدام نباشد exit 1):
 
 ```json
 {"ok":true,"schema":"ticker.v1","as_of_unix":1790527647,"source":"coingecko","items":[{"symbol":"BTC","quote":"USD","price":"67210.12","volume_24h":"12345.67","change_24h_pct":"-1.24","as_of_unix":1790527647,"stale":false}],"errors":[{"symbol":"DOGE","code":"PRICE_UNAVAILABLE","detail":"no cached price for DOGE"}],"meta":{"cache":"hit","partial":true,"redis_ms":1,"http_ms":0}}
 ```
 
-`convert --from BTC --to USDT --amount 1.5` with BTC = 67210.12 USD and USDT = 1.00002813 USD cached:
+`convert --from BTC --to USDT --amount 1.5` وقتی در cache داریم BTC = 67210.12 USD و USDT = 1.00002813 USD:
 
 ```json
 {"ok":true,"schema":"convert.v1","as_of_unix":1790528322,"stale":false,"source":"coingecko","from":"BTC","to":"USDT","amount":"1.5","result":"100812.34414876","rate":"67208.22943251","legs":[{"symbol":"BTC","quote":"USD","price":"67210.12","as_of_unix":1790528324,"stale":false},{"symbol":"USDT","quote":"USD","price":"1.00002813","as_of_unix":1790528322,"stale":false}],"meta":{"cache":"hit","redis_ms":1,"http_ms":0}}
 ```
 
-`health` (exit 0; with Redis down the same body with `"ok":false` and `"redis":{"ok":false,...}`, exit 3):
+`health` (exit 0؛ اگر Redis پایین باشد همین بدنه با `"ok":false` و `"redis":{"ok":false,...}` برمی‌گردد و exit 3 است):
 
 ```json
 {"ok":true,"schema":"health.v1","as_of_unix":1790528983,"process":{"ok":true,"lua":"Lua 5.4","version":"0.1.0"},"redis":{"ok":true,"latency_ms":1},"source":{"name":"coingecko","last_fetch_unix":1790528981,"last_fetch_age_s":2,"vendor_calls":1,"cooldown_active":false}}
 ```
 
-`daemon`: one request per stdin line, one response per stdout line, `id` echoed, EOF → exit 0.
+`daemon`: هر خط stdin یک درخواست و هر خط stdout یک پاسخ است. `id` عیناً برگردانده می‌شود و با
+رسیدن EOF برنامه با exit 0 تمام می‌شود.
 
 ```bash
 printf '%s\n' '{"id":"1","command":"fetch","symbols":["BTC"]}' \
               '{"id":"2","command":"snapshot","symbols":["BTC"]}' | lua market.lua daemon
 # {"id":"1","ok":true,...,"meta":{"cache":"miss",...}}
-# {"id":"2","ok":true,...,"meta":{"cache":"memory",...}}     <- answered from the in-process LRU
+# {"id":"2","ok":true,...,"meta":{"cache":"memory",...}}     <- جوابش از LRU داخل پروسه آمده
 ```
 
-## Where this differs from the brief's examples
+## جاهایی که با مثال‌های صورت تمرین فرق دارد
 
-- **Quote is `USD`, not `USDT`** ([ADR 0015](docs/adr/0015-usd-quote-with-cross-rate-conversion.md)):
-  CoinGecko quotes in fiat. `convert --to USDT` works through USDT's own USD price.
-- **Redis down fails closed** ([ADR 0009](docs/adr/0009-fail-closed-when-redis-unavailable.md)):
-  exit 3 with `REDIS_UNAVAILABLE`. Without Redis, uncoordinated workers would stampede the vendor.
-- **Partial success** ([ADR 0010](docs/adr/0010-partial-success-semantics.md)): unknown symbols and
-  bad vendor rows go to `errors[]` with a reason, the rest are returned, exit 0.
-- **Vendor failures exit 1 with last-good data attached**
-  ([ADR 0011](docs/adr/0011-vendor-failure-returns-error-with-last-good-data.md)): `ok:false`,
-  `SOURCE_UNAVAILABLE` / `RATE_LIMITED` / `BAD_PAYLOAD` / `DEADLINE_EXCEEDED`, and the body still
-  carries every cached item, each marked `stale` when it is old.
-- **Every item carries its own `as_of_unix` and `stale`**; the top-level `as_of_unix` is the oldest
-  item's ([ADR 0003](docs/adr/0003-versioned-output-schema-ticker-v1.md)).
+- **ارز مبنا `USD` است، نه `USDT`** ([ADR 0015](docs/adr/0015-usd-quote-with-cross-rate-conversion.md)):
+  CoinGecko قیمت را به ارز فیات می‌دهد. `convert --to USDT` از طریق قیمت دلاری خود USDT حساب می‌شود.
+- **اگر Redis پایین باشد، برنامه کار نمی‌کند** ([ADR 0009](docs/adr/0009-fail-closed-when-redis-unavailable.md)):
+  exit 3 با `REDIS_UNAVAILABLE`. بدون Redis هیچ هماهنگی‌ای بین workerها نیست و همه با هم روی
+  vendor می‌ریزند.
+- **موفقیت نسبی** ([ADR 0010](docs/adr/0010-partial-success-semantics.md)): نمادهای ناشناخته و
+  ردیف‌های خراب vendor با دلیلشان در `errors[]` می‌روند، بقیه برگردانده می‌شوند و exit 0 است.
+- **خطای vendor یعنی exit 1، ولی آخرین دادهٔ سالم هم همراهش می‌آید**
+  ([ADR 0011](docs/adr/0011-vendor-failure-returns-error-with-last-good-data.md)): `ok:false` با
+  یکی از `SOURCE_UNAVAILABLE` / `RATE_LIMITED` / `BAD_PAYLOAD` / `DEADLINE_EXCEEDED`، و بدنه
+  همچنان همهٔ آیتم‌های cache‌شده را دارد؛ هر کدام که قدیمی باشد با `stale` مشخص می‌شود.
+- **هر آیتم `as_of_unix` و `stale` خودش را دارد** و `as_of_unix` سطح بالا مال قدیمی‌ترین آیتم است
+  ([ADR 0003](docs/adr/0003-versioned-output-schema-ticker-v1.md)).
 
-## Layout
+## ساختار پوشه‌ها
 
 ```
-market.lua          entrypoint: argv -> validate -> config -> command -> one JSON line -> exit code
+market.lua          نقطهٔ ورود: argv -> اعتبارسنجی -> config -> دستور -> یک خط JSON -> exit code
 src/                cli, config, output, log, deadline, decimal, normalize, redis_client, lock,
                     limiter, snapshot, cache, commands/, source/ (coingecko, binance, kraken)
-tests/              busted specs, fixtures/, support/ (process runner, vendor stub)
+tests/              specهای busted، fixtures/، support/ (اجراکنندهٔ پروسه، stub برای vendor)
 scripts/            load.sh, host_example.py
-docs/               ARCHITECTURE.md, LOAD.md, adr/, the assignment brief
+docs/               ARCHITECTURE.md، LOAD.md، adr/، صورت تمرین
 ```
